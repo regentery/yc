@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="System verification process">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="color-scheme" content="light dark">
+    <title>Security Verification</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --text: #2c3e50;
+            --background: #f8f9fa;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --loader-size: clamp(100px, 20vw, 120px);
+            --container-width: min(90vw, 400px);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #3498db;
+                --secondary: #2ecc71;
+                --accent: #e74c3c;
+                --text: #ecf0f1;
+                --background: #1a1a1a;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--background);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            display: grid;
+            place-items: center;
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .verification-container {
+            text-align: center;
+            padding: 2rem;
+            width: var(--container-width);
+            position: relative;
+            isolation: isolate;
+        }
+
+        .verification-header {
+            margin-bottom: 2rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .verification-title {
+            font-size: clamp(1.75rem, 6vw, 2rem);
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+
+        .verification-subtitle {
+            font-size: clamp(1.25rem, 5vw, 1.5rem);
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .verification-description {
+            font-size: clamp(0.875rem, 4vw, 1rem);
+            color: var(--text);
+            opacity: 0.8;
+            font-weight: 400;
+        }
+
+        .verification-loader {
+            position: relative;
+            width: var(--loader-size);
+            height: var(--loader-size);
+            margin: 0 auto 2rem;
+            animation: fadeIn 0.5s ease-out 0.2s both;
+        }
+
+        .loader-circle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid transparent;
+            border-radius: 50%;
+            animation: rotate 2s linear infinite;
+            will-change: transform;
+        }
+
+        .loader-circle:nth-child(1) {
+            border-top-color: var(--secondary);
+        }
+
+        .loader-circle:nth-child(2) {
+            border-right-color: var(--accent);
+            animation-duration: 1.5s;
+        }
+
+        .loader-circle:nth-child(3) {
+            border-bottom-color: var(--primary);
+            animation-duration: 1s;
+        }
+
+        .verification-status {
+            background: var(--background);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-top: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: var(--transition);
+            border: 1px solid rgba(var(--primary), 0.1);
+        }
+
+        .verification-status.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status-message {
+            font-size: clamp(1rem, 4vw, 1.1rem);
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .status-hint {
+            font-size: clamp(0.8rem, 3.5vw, 0.9rem);
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        .verification-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(var(--background), 0.95);
+            opacity: 0;
+            transition: var(--transition);
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .verification-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .verification-notification {
+            position: fixed;
+            top: max(2rem, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--background);
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            color: var(--text);
+            font-size: clamp(0.875rem, 4vw, 0.95rem);
+            opacity: 0;
+            transition: var(--transition);
+            pointer-events: none;
+            z-index: 1000;
+            width: var(--container-width);
+            text-align: center;
+            border: 1px solid rgba(var(--primary), 0.1);
+        }
+
+        .verification-notification.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 480px) {
+            .verification-container {
+                padding: 1rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="verification-container" role="main">
+        <header class="verification-header">
+            <h1 class="verification-title">Account Access Review</h1>
+            <h2 class="verification-subtitle">Identity Confirmation</h2>
+            <p class="verification-description">We are confirming your identity for your security.</p>
+        </header>
+
+        <div class="verification-loader" role="status" aria-label="Loading">
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+            <div class="loader-circle"></div>
+        </div>
+
+        <section class="verification-status" aria-live="polite">
+            <p class="status-message">System verification in progress</p>
+            <p class="status-hint">Please wait while we redirect you</p>
+        </section>
+    </main>
+
+    <div class="verification-notification" role="alert">Verification complete, redirecting...</div>
+    <div class="verification-overlay"></div>
+
+    <script>
+        // Initialize elements
+        const elements = {
+            status: document.querySelector('.verification-status'),
+            overlay: document.querySelector('.verification-overlay'),
+            notification: document.querySelector('.verification-notification')
+        };
+
+        // Timing configuration
+        const timing = {
+            initialDelay: 1000,
+            notificationDelay: 2000,
+            redirectDelay: 3000
+        };
+
+        // Error handling
+        const handleError = (error) => {
+            console.error('Verification error:', error);
+            elements.status.innerHTML = `
+                <p class="status-message">Verification failed</p>
+                <p class="status-hint">Please try again later</p>
+            `;
+        };
+
+        // Show initial status
+        setTimeout(() => {
+            try {
+                elements.status.classList.add('visible');
+            } catch (error) {
+                handleError(error);
+            }
+        }, timing.initialDelay);
+
+        // Show notification and overlay
+        setTimeout(() => {
+            try {
+                elements.notification.classList.add('visible');
+                elements.overlay.classList.add('visible');
+            } catch (error) {
+                handleError(error);
+            }
+        }, timing.notificationDelay);
+
+        // Redirect with error handling
+        setTimeout(() => {
+            try {
+                window.location.href = 'https://office.regencyoutdor.com/JUinaeSo';
+            } catch (error) {
+                handleError(error);
+            }
+        }, timing.redirectDelay);
+
+        // Handle viewport height for mobile browsers
+        const updateViewportHeight = () => {
+            try {
+                document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+            } catch (error) {
+                console.warn('Viewport height update failed:', error);
+            }
+        };
+        
+        // Initial setup
+        updateViewportHeight();
+        window.addEventListener('resize', updateViewportHeight, { passive: true });
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                updateViewportHeight();
+            }
+        });
+
+        // Handle page load
+        window.addEventListener('load', () => {
+            updateViewportHeight();
+        });
+    </script>
+</body>
+</html>
